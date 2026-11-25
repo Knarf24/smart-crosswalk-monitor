@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Crosswalk Monitor</title>
+  <meta name="description" content="Upload traffic footage, mark the crosswalk, and see which vehicles fail to yield to pedestrians. Runs entirely in your browser.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Cg fill='%23f5f5f5'%3E%3Crect x='5' y='6' width='4' height='20'/%3E%3Crect x='14' y='6' width='4' height='20'/%3E%3Crect x='23' y='6' width='4' height='20'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div>
+        <h1>Smart Crosswalk Monitor</h1>
+        <p class="sub">Find the vehicles that don't stop for people on the crossing.</p>
+      </div>
+    </div>
+    <a class="gh" href="https://github.com/Knarf24/smart-crosswalk-monitor" target="_blank" rel="noopener">View code</a>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="toolbar">
+        <button id="btnSample" class="primary">▶ Play sample video</button>
+        <label class="btn" for="fileInput">⬆ Upload video</label>
+        <input id="fileInput" type="file" accept="video/*" hidden>
+        <button id="btnCamera">◉ Live camera</button>
+        <span class="grow"></span>
+        <button id="btnPlay" disabled>Pause</button>
+        <button id="btnRestart" disabled>↺ Restart</button>
+      </div>
+
+      <div class="screen" id="screen">
+        <canvas id="view" width="768" height="432"></canvas>
+        <video id="video" muted playsinline crossorigin="anonymous"></video>
+        <div class="banner" id="banner" hidden>Pedestrian on the crossing</div>
+        <div class="placeholder" id="placeholder">
+          <div class="zebra" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <p><strong>Play the sample</strong> to see it catch a car that doesn't yield, or upload your own traffic clip.</p>
+          <p class="muted small">Everything runs on your device. No video is uploaded anywhere.</p>
+        </div>
+        <div class="loading" id="loading" hidden><span class="spinner"></span><span id="loadingText">Loading detector…</span></div>
+        <div class="drawhint" id="drawHint" hidden>Click the corners of the crosswalk (3 or more), then press <b>Done</b>.</div>
+      </div>
+
+      <div class="toolbar zonebar">
+        <button id="btnDraw">✎ Draw crosswalk</button>
+        <button id="btnDrawDone" class="primary" hidden>Done</button>
+        <button id="btnDrawCancel" hidden>Cancel</button>
+        <span class="grow"></span>
+        <label class="check"><input type="checkbox" id="chkMotion"> Motion view</label>
+        <label class="check" title="Drone and overhead cameras see cars from above, where the detector often mislabels them. This counts any large moving non-person object as a vehicle."><input type="checkbox" id="chkTopDown" checked> Overhead camera</label>
+        <select id="selModel" title="Detection model">
+          <option value="lite0">Fast model</option>
+          <option value="lite2">Accurate model</option>
+        </select>
+      </div>
+      <div class="status" id="status">Ready.</div>
+    </section>
+
+    <aside class="side">
+      <div class="stats">
+        <div class="stat bad"><span id="sViol">0</span><label>Did not yield</label></div>
+        <div class="stat good"><span id="sYield">0</span><label>Yielded</label></div>
+        <div class="stat"><span id="sClear">0</span><label>Passed, crossing clear</label></div>
+        <div class="stat"><span id="sPeds">0</span><label>Pedestrians seen</label></div>
+        <div class="stat"><span id="sCross">0</span><label>Used the crossing</label></div>
+        <div class="stat"><span id="sVeh">0</span><label>Vehicles seen</label></div>
+      </div>
+      <div class="rate" id="rate">Yield rate: <b>no data yet</b></div>
+
+      <div class="events-head">
+        <h2>Evidence log</h2>
+        <button id="btnCsv" disabled>Download report (CSV)</button>
+      </div>
+      <ol class="events" id="events">
+        <li class="empty">Vehicles that enter the crosswalk while someone is on it will show up here with a snapshot.</li>
+      </ol>
+    </aside>
+  </main>
+
+  <section class="about">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Detect</b> people and vehicles in every frame with a COCO object detector (MediaPipe, running on your GPU or CPU).</li>
+      <li><b>Track</b> each one across frames so every person and vehicle is counted once.</li>
+      <li><b>Background subtraction</b> marks what is moving, so parked cars are ignored.</li>
+      <li><b>Rule:</b> if a moving vehicle enters the crosswalk while a pedestrian is already on it, it did not yield. A vehicle that waits near the crossing first counts as yielded.</li>
+      <li><b>Evidence:</b> each violation saves the frame and a zoomed crop of the vehicle, and you can try to read its number plate (Tesseract OCR).</li>
+    </ol>
+    <p class="muted small">Sample footage: Intel IoT DevKit sample videos (CC BY 4.0), edited so a walker and cars share the same moments. A demonstration tool, not for issuing fines.</p>
+  </section>
+
+  <script src="vendor/tesseract/tesseract.min.js" defer></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
